@@ -9,18 +9,23 @@
 
   <style>
   video, canvas {
-    margin-left: 230px;
-    margin-top: 24px;
+    margin: 0, 0, 0, 0 ;
     position: absolute;
   }
 
-    #extracted-canvas {
-    margin-top: 264px;
-    margin-left: 230px;
-    position: absolute !important;
-    border-color: red;
-    border-width: 5px;
+  #extracted-canvas {
+    display: none !important;
+    margin-top: 252px;
   }
+
+  img[src="#"] {
+    display: none;
+  }
+
+  #extracted-face {
+    margin-top: 246px;
+  }
+
   </style>
 </head>
 <body>
@@ -28,31 +33,27 @@
     <p><a href="http://trackingjs.com" target="_parent">tracking.js</a> － get user's webcam and detect faces</p>
   </div>
 
-  <div class="demo-frame">
-    <div class="demo-container">
       <video id="video" width="320" height="240" preload autoplay loop muted></video>
       <canvas id="canvas" width="320" height="240"></canvas>
-      <div><canvas id="extracted-canvas" width="320" height="240"></canvas></div>
-    </div>
-  </div>
-  <footer><a href="#" id="png">LINK</a></footer>
+      <div><canvas id="extracted-canvas" width="400" height="500"></canvas></div>
+      <a href="/#" id="png-dl"><img src="#" id="extracted-face"></a>
 
 
 
   <script>
     window.onload = function() {
       var video = document.getElementById('video');
-
       var canvas = document.getElementById('canvas');
       var context = canvas.getContext('2d');
 
       var tracker = new tracking.ObjectTracker('face');
 
+      //canvas to put extracted face into
       var extracted_canvas = document.getElementById('extracted-canvas');
       var extracted_context = extracted_canvas.getContext('2d');
-      //canvas to put extracted face into
-      const ext_width = extracted_canvas.width
-      const ext_height = extracted_canvas.height
+
+      const ext_width = extracted_canvas.width;
+      const ext_height = extracted_canvas.height;
 
       tracker.setInitialScale(4);
       tracker.setStepSize(2);
@@ -61,7 +62,7 @@
       tracker.on('track', function(event) {
         context.clearRect(0, 0, canvas.width, canvas.height);
         extracted_context.clearRect(0, 0, extracted_canvas.width, extracted_canvas.height);
-        //extracted_context.clearRect(0, 0, canvas.width, canvas.height);
+        
         event.data.forEach(function(rect) {
           context.strokeStyle = '#a64ceb';
           context.strokeRect(rect.x, rect.y, rect.width, rect.height);
@@ -70,32 +71,52 @@
           context.fillText('x: ' + rect.x + 'px', rect.x + rect.width + 5, rect.y + 11);
           context.fillText('y: ' + rect.y + 'px', rect.x + rect.width + 5, rect.y + 22);
 
-          context.strokeStyle = "#ffffff";
-          context.strokeRect(rect.x,rect.y,100,100);
-
+          
+          
           //cropping
           var myrect_centx = (rect.x + rect.width/2);
           var myrect_centy = (rect.y + rect.height/2);
-          var centx = myrect_centx/ext_width
-          var centy = myrect_centy/ext_height
+          
           //for some reason the units don't align, i think one var is in pixels and another is in pts or something
           //this bit helps calculate compensation.
-
+          var centx = myrect_centx/ext_width;
+          var centy = myrect_centy/ext_height;
+          
+          //take an area and put it into the new canvas, scaling to fit the canvas 
+          //(should've used a var to create and set canvas height but it's too late for that)
           extracted_context.drawImage(image=video, 
-                                      //rect.x+rect.width*centx, rect.y+rect.height*centy, 
                                       rect.x+(centx*rect.width*2.4), rect.y+(centy*rect.height*1.5),
-                                      //dWidth=(rect.width+(100))*0.8, dHeight=rect.height+(100), 
-                                      rect.width*2, rect.height*2,
+                                      rect.width*2, rect.height*2.5,
                                       0, 0, 
-                                      // rect.width*2*0.8, rect.height*2
-                                      rect.width*2, rect.height*2
+                                      400, 500
                                       );
+          
+          
+          //get the img and the hyperlink tag as js objects
+          var extracted_face = document.getElementById('extracted-face');
+          var png_dl_link = document.getElementById('png-dl');
+          
+          //making the png
+          //jpg works too but i think jpg data is harder for tensorflow to work with, needs preprocessing
+          dataURL = extracted_canvas.toDataURL('image/png;base64');
+          
+          //set the image source and hyperlink to the png
+          extracted_face.src = dataURL
+          png_dl_link.href = dataURL
 
-      var png  = extracted_canvas.toDataURL("image/png");
-      var jpg  = extracted_canvas.toDataURL("image/jpeg");
-      var download_link = document.getElementById("png")
-      download_link.src = png
-      console.log(png)
+          //fun but useless:
+          /*extracted_canvas.toBlob(function(blob) {
+            var newImg = document.createElement('img'),
+                url = URL.createObjectURL(blob);
+
+            newImg.onload = function() {
+              // no longer need to read the blob so it's revoked
+              URL.revokeObjectURL(url);
+            };
+
+            newImg.src = url;
+            document.body.appendChild(newImg);
+          });*/
 
 
 
